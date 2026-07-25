@@ -6,11 +6,22 @@
     <title>Constructor de Pedidos PRO v26 - Edición Estándar</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
-        :root { --primary-grad: linear-gradient(135deg, #667eea 0%, #764ba2 100%); --bg-light: rgba(255, 255, 255, 0.95); --text-dark: #2c3e50; --accent-blue: #3498db; --accent-green: #28a745; --accent-red: #dc3545; --btn-whatsapp: #25D366; }
+        :root {
+            --primary: #1C3A5E;       /* navy de marca */
+            --primary-light: #2c527f;
+            --accent-orange: #FF6B35; /* naranja de marca — avisos */
+            --bg-light: #ffffff;
+            --bg-page: #eef2f6;
+            --text-dark: #1C3A5E;
+            --accent-blue: #2c527f;
+            --accent-green: #1e8e5a;
+            --accent-red: #dc3545;
+            --btn-whatsapp: #25D366;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background: var(--primary-grad); min-height: 100vh; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background: var(--bg-page); min-height: 100vh; }
         .container { max-width: 1500px; margin: 0 auto; padding: 20px; }
-        .panel { background: var(--bg-light); backdrop-filter: blur(10px); border-radius: 15px; padding: 20px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); }
+        .panel { background: var(--bg-light); border: 1px solid #dde3ea; border-radius: 15px; padding: 20px; box-shadow: 0 4px 16px rgba(28, 58, 94, 0.06); }
         h1, h3 { color: var(--text-dark); }
         h1 { text-align: center; margin-bottom: 20px; font-size: 2.5rem; }
         #loading-section { padding: 40px; text-align: center; }
@@ -21,23 +32,25 @@
         .main-content { display: flex; flex-direction: column; gap: 20px; }
         .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.5px; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-primary { background: var(--primary-grad); color: white; }
+        .btn-primary { background: var(--primary); color: white; }
         .btn-info { background: var(--accent-blue); color: white; }
         .btn-success { background: var(--accent-green); color: white; }
         .btn-danger { background: var(--accent-red); color: white; }
         .btn-whatsapp { background: var(--btn-whatsapp); color: white; }
         .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; max-height: 45vh; overflow-y: auto; padding: 5px; }
-        .product-card { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-left: 4px solid #667eea; }
-        .product-sku { font-weight: 700; color: #667eea; }
+        .product-card { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 12px rgba(28,58,94,0.08); border-left: 4px solid var(--primary); }
+        .product-sku { font-weight: 700; color: var(--primary); }
         .product-description { font-size: 13px; color: #666; margin-bottom: 10px; }
         .quantity-input { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
         .order-section-grid { display: grid; grid-template-columns: 1fr 400px; gap: 20px; }
         .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e0e0e0; }
         .order-total { font-size: 18px; font-weight: 700; color: var(--accent-green); }
         .order-items { max-height: 50vh; overflow-y: auto; }
-        .order-item { background: #f8f9fa; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 15px; align-items: center; padding: 10px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--accent-green); position: relative; }
-        .order-item-info .sku { font-weight: 600; color: #667eea; font-size: 14px; }
+        .order-item { background: #f7f9fb; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 15px; align-items: center; padding: 10px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--accent-green); position: relative; }
+        .order-item-info .sku { font-weight: 600; color: var(--primary); font-size: 14px; }
         .order-item-info .desc { font-size: 12px; color: #666; }
+        .aviso-bajo-mayor { font-size: 11px; font-weight: 700; color: #b35400; background: #fff1e6; border: 1px solid var(--accent-orange); border-radius: 4px; padding: 3px 6px; margin-top: 4px; display: inline-block; }
+        .input-aviso { border: 2px solid var(--accent-orange) !important; }
         .order-item-controls { display: flex; align-items: center; gap: 10px; }
         .order-item-controls input[type="number"] { width: 60px; padding: 5px; text-align: center; }
         .price-details { text-align: right; }
@@ -45,16 +58,17 @@
         .price-details .line-total { font-size: 14px; font-weight: bold; display: block; margin-top: 5px;}
         .price-override-section { display: flex; gap: 5px; align-items: center; }
         .price-override-section select { font-size: 12px; padding: 5px; flex-grow: 1; }
-        .btn-reset { background: #f0ad4e; color: white; border: 0; border-radius: 4px; padding: 4px 8px; font-size: 10px; cursor: pointer; }
+        .btn-reset { background: var(--accent-orange); color: white; border: 0; border-radius: 4px; padding: 4px 8px; font-size: 10px; cursor: pointer; }
         .btn-remove-item { position: absolute; top: 5px; right: 5px; background: var(--accent-red); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-weight: bold; cursor: pointer; line-height: 22px; text-align: center; font-size: 14px; }
-        .global-price-applicator { background: #e8f4fd; padding: 10px; border-radius: 8px; margin-bottom: 15px; }
+        .global-price-applicator { background: #eaf1f8; padding: 10px; border-radius: 8px; margin-bottom: 15px; }
         .global-price-applicator .controls { display: flex; gap: 10px; }
         .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;}
         .copy-output { background: var(--text-dark); color: #ecf0f1; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 12px; white-space: pre-wrap; max-height: 200px; overflow-y: auto; margin-top: 10px; }
-        .filters-section { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; align-items: center;}
+        .filters-section { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 15px; padding: 15px; background: #f7f9fb; border-radius: 8px; align-items: center;}
         
         /* Estilo para información de cache */
-        .cache-info { margin-top: 10px; padding: 8px; background: #f8f9fa; border-radius: 5px; font-size: 12px; color: #666; }
+        .cache-info { margin-top: 10px; padding: 8px; background: #f7f9fb; border-radius: 5px; font-size: 12px; color: #666; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .btn-refresh-catalogo { background: var(--primary); color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; cursor: pointer; font-weight: 600; }
         
         @media (max-width: 900px) { .order-section-grid { grid-template-columns: 1fr; } .order-item { grid-template-columns: 1fr; } }
     </style>
@@ -63,9 +77,10 @@
     <div class="container">
         <div id="loading-section" class="panel">
             <h1 style="font-size: 2rem;">Constructor de Pedidos</h1>
-            <p id="loading-status" style="color: #667eea; font-weight: 600;">🔄 Cargando catálogo automáticamente...</p>
+            <p id="loading-status" style="color: #1C3A5E; font-weight: 600;">🔄 Cargando catálogo automáticamente...</p>
             <div id="cache-info" class="cache-info" style="display: none;">
                 <strong>Estado del cache:</strong> <span id="cache-status"></span>
+                <button class="btn-refresh-catalogo" onclick="loadCatalogFromSheets(true)">🔄 Actualizar catálogo</button>
             </div>
         </div>
 
@@ -121,123 +136,197 @@
     <script>
         let allProducts = [], pricesBySku = {}, currentOrder = [];
 
-        // URLs con GitHub Pages como fuente principal y cache inteligente
-        const CATALOG_ALTERNATIVES = [
-            'https://leonardo7512.github.io/CORRECTORPRECIOS/2708CATALOGO_ACTUALIZADO3.csv', // ⭐ PRINCIPAL - Sin rate limits
-            './2708CATALOGO_ACTUALIZADO3.csv', // Relativa si está en la misma carpeta
-            'https://cdn.jsdelivr.net/gh/leonardo7512/CORRECTORPRECIOS@main/2708CATALOGO_ACTUALIZADO3.csv',
-            'https://raw.githubusercontent.com/leonardo7512/CORRECTORPRECIOS/main/2708CATALOGO_ACTUALIZADO3.csv'
-        ];
+        // 📊 CONEXIÓN EN VIVO A GOOGLE SHEETS — mismas URLs exactas que usan
+        // AROCHECK.js / cotizadoraromaker.js / ModuloDocumentos.js / el Corrector
+        const SHEETS_CONFIG = {
+            principal: { id: '1G-YTvarwG14zc0s7EcLKtvHnBBM7uXiCbFTNttDrqDg', gid: '468760285' },
+            excepciones: { id: '171l6JpmS2b1Aq-WDXLiq8d4SMJM75oUXf6Y8xhpd2Jk', gid: '1973237883' }
+        };
+        function urlHojaCSV(cfg) {
+            return `https://docs.google.com/spreadsheets/d/${cfg.id}/export?format=csv&gid=${cfg.gid}`;
+        }
+        function fetchConTimeout(url, ms = 15000) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), ms);
+            return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
+        }
 
-        async function loadCatalogFromUrl() {
+        function normalizarSKU(s) { if (!s) return ""; return String(s).toUpperCase().replace(/\s+/g, "").replace(/[^A-Z0-9-]/g, ""); }
+        function limpiarValor(v) { if (typeof v === 'number') return v; if (typeof v !== 'string' || v.trim() === '') return null; try { let cleanStr = String(v).replace(/[$\s]/g, ''); const lastDot = cleanStr.lastIndexOf('.'); const lastComma = cleanStr.lastIndexOf(','); if (lastComma > lastDot) { return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.')); } if (lastDot > lastComma) { const parts = cleanStr.split('.'); if (parts.length > 1 && parts[parts.length - 1].length !== 3) { return parseFloat(cleanStr); } return parseFloat(cleanStr.replace(/\./g, '')); } return parseFloat(cleanStr); } catch (e) { return null; } }
+        function normalizarTextoCatalogo(s) { return (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim(); }
+        // Las 3 familias de excepción vienen SIEMPRE de Catálogo Excepciones, nunca del principal
+        // (misma regla exacta que AROCHECK.js / ModuloDocumentos.js / cotizadoraromaker.js / el Corrector)
+        function esFamiliaExcluidaDePrincipal(categoria) {
+            const c = normalizarTextoCatalogo(categoria);
+            if (/lata sani.?air hogar/.test(c)) return true;
+            if (/lata auto/.test(c)) return true;
+            if (/tabletas aromaticas/.test(c)) return true;
+            return false;
+        }
+        function encontrarIndiceColumnaExc(header, nombres) {
+            for (let i = 0; i < header.length; i++) {
+                const h = normalizarTextoCatalogo(header[i]);
+                if (nombres.some(n => h === normalizarTextoCatalogo(n))) return i;
+            }
+            return -1;
+        }
+
+        function registrarPrecio(pricesBySku, products, categories, sku, descripcion, categoria, tipo, neto, bruto) {
+            if (bruto == null || bruto <= 0) return;
+            if (!pricesBySku[sku]) {
+                products.push({ sku, description: descripcion, family: sku.substring(0, 2), priceCategory: categoria || 'General' });
+                pricesBySku[sku] = [];
+                categories.add(categoria || 'General');
+            }
+            pricesBySku[sku].push({ type: tipo, net: neto, gross: bruto });
+        }
+
+        // Catálogo principal ("Precios Aromaker"): fila 0 = banner decorativo, fila 1 = encabezados reales, fila 2+ = datos
+        // D=CATEGORIA, E=DESCRIPCION, F=SKU, G=PRECIO DETALLE(bruto), H=NETO Detalle, I=PRECIO MAYOR(bruto), J=NETO Mayor, K=IMAGEN, L=OBSERVACIONES
+        // ⚠️ Nunca genera filas VIP/Webalia — este constructor es para vendedores, no deben verlas ni aunque existieran.
+        function procesarCatalogoPrincipalSheets(csvText, pricesBySku, products, categories) {
+            const data = Papa.parse(csvText, { skipEmptyLines: false }).data;
+            for (let i = 2; i < data.length; i++) {
+                const row = data[i];
+                if (!row || row.length < 12) continue;
+                const categoria = (row[3] || '').trim();
+                const descripcion = (row[4] || '').trim();
+                const sku = normalizarSKU(row[5]);
+                if (!sku) continue;
+                if (esFamiliaExcluidaDePrincipal(categoria)) continue; // viene solo de Excepciones
+                const detalleBruto = limpiarValor(row[6]) || 0;
+                const detalleNeto = limpiarValor(row[7]) || 0;
+                const mayorBruto = limpiarValor(row[8]) || 0;
+                const mayorNeto = limpiarValor(row[9]) || 0;
+                const observaciones = (row[11] || '').trim();
+
+                if (observaciones.toUpperCase().includes('PRECIO UNICO')) {
+                    registrarPrecio(pricesBySku, products, categories, sku, descripcion, categoria, 'PRECIO UNICO', detalleNeto, detalleBruto);
+                    continue;
+                }
+                registrarPrecio(pricesBySku, products, categories, sku, descripcion, categoria, 'DETALLE', detalleNeto, detalleBruto);
+                if (mayorBruto > 0) {
+                    const matchUmbral = observaciones.match(/MAYOR DESDE (\d+)/i);
+                    const umbral = matchUmbral ? matchUmbral[1] : '6';
+                    registrarPrecio(pricesBySku, products, categories, sku, descripcion, categoria, `MAYOR ${umbral} UN.`, mayorNeto, mayorBruto);
+                }
+            }
+        }
+
+        // Catálogo de excepciones (CATALOGO_LIMPIO): SOLO se usa para las 3 familias que el catálogo
+        // principal excluye a propósito (Lata Sani-Air Hogar, Lata Auto, Tabletas) — su Detalle/Mayor
+        // real vive acá. Cualquier PRECIO_VIP / PRECIO_WEBALIA de esta hoja se ignora por completo:
+        // este constructor es para vendedores y nunca deben ver ni aplicar un precio especial.
+        function procesarCatalogoExcepcionesSheets(csvText, pricesBySku, products, categories) {
+            const data = Papa.parse(csvText, { skipEmptyLines: false }).data;
+            let idxHeader = -1;
+            for (let i = 0; i < Math.min(data.length, 5); i++) {
+                if (encontrarIndiceColumnaExc(data[i] || [], ['sku']) !== -1) { idxHeader = i; break; }
+            }
+            if (idxHeader === -1) return;
+            const header = data[idxHeader];
+            const iCategoria = encontrarIndiceColumnaExc(header, ['categoria']);
+            const iSku = encontrarIndiceColumnaExc(header, ['sku']);
+            const iDescripcion = encontrarIndiceColumnaExc(header, ['descripcion']);
+            const iPrecioDetalle = encontrarIndiceColumnaExc(header, ['precio_detalle', 'precio detalle']);
+            const iPrecioMayor = encontrarIndiceColumnaExc(header, ['precio_mayor', 'precio mayor']);
+            const iUmbral = encontrarIndiceColumnaExc(header, ['umbral_mayor', 'umbral mayor']);
+            const iNotas = encontrarIndiceColumnaExc(header, ['notas']);
+            if (iSku === -1) return;
+
+            for (let i = idxHeader + 1; i < data.length; i++) {
+                const row = data[i];
+                if (!row) continue;
+                const sku = normalizarSKU(row[iSku]);
+                if (!sku) continue;
+                const categoria = iCategoria !== -1 ? (row[iCategoria] || '').trim() : '';
+                if (!esFamiliaExcluidaDePrincipal(categoria)) continue; // no es una de las 3 familias: su Detalle/Mayor ya vino del principal
+                const descripcion = iDescripcion !== -1 ? (row[iDescripcion] || '').trim() : '';
+                const precioDetalle = iPrecioDetalle !== -1 ? (limpiarValor(row[iPrecioDetalle]) || 0) : 0;
+                const precioMayor = iPrecioMayor !== -1 ? (limpiarValor(row[iPrecioMayor]) || 0) : 0;
+                const notas = iNotas !== -1 ? (row[iNotas] || '').trim() : '';
+
+                if (precioDetalle > 0) {
+                    registrarPrecio(pricesBySku, products, categories, sku, descripcion, categoria, 'DETALLE', Math.round(precioDetalle / 1.19), precioDetalle);
+                }
+                if (precioMayor > 0) {
+                    const matchUmbral = notas.match(/MAYOR DESDE (\d+)/i) || notas.match(/MAYOR\s*(\d+)/i);
+                    const umbral = matchUmbral ? matchUmbral[1] : ((iUmbral !== -1 ? (row[iUmbral] || '').trim() : '') || '6');
+                    registrarPrecio(pricesBySku, products, categories, sku, descripcion, categoria, `MAYOR ${umbral} UN.`, Math.round(precioMayor / 1.19), precioMayor);
+                }
+            }
+        }
+
+        function terminarCargaCatalogo(products, pricesBySkuNuevo, categories) {
+            allProducts = products.sort((a, b) => a.description.localeCompare(b.description));
+            pricesBySku = pricesBySkuNuevo;
+            const catFilter = document.getElementById('categoryFilter');
+            catFilter.innerHTML = '<option value="">Todas las Categorías</option>';
+            Array.from(categories).sort().forEach(c => catFilter.innerHTML += `<option value="${c}">${c}</option>`);
+            clearProductDisplay();
+            updateOrderDisplay();
+            document.getElementById('loading-section').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+        }
+
+        async function loadCatalogFromSheets(forzarRefresco = false) {
             const statusEl = document.getElementById('loading-status');
             const cacheInfoEl = document.getElementById('cache-info');
             const cacheStatusEl = document.getElementById('cache-status');
-            
-            // Cache inteligente de 4 horas (misma configuración que el corrector)
-            const cachedData = localStorage.getItem('constructorStandardCache');
-            const cacheTime = localStorage.getItem('constructorStandardCacheTime');
             const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 horas
-            
-            // Si hay cache válido, usarlo inmediatamente
-            if (cachedData && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_DURATION) {
-                const remainingMinutes = Math.round((CACHE_DURATION - (Date.now() - parseInt(cacheTime))) / 60000);
-                statusEl.textContent = '✅ Catálogo desde cache local';
-                statusEl.style.color = 'var(--accent-green)';
-                
-                // Mostrar información del cache
-                cacheInfoEl.style.display = 'block';
-                cacheStatusEl.textContent = `Cache válido por ${remainingMinutes} minutos más`;
-                
-                Papa.parse(cachedData, {
-                    delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
-                    complete: (results) => processCSVData(results.data),
-                    error: (err) => console.error('Error procesando cache:', err)
-                });
-                return;
-            }
-            
-            // Si hay cache expirado, usarlo mientras actualizamos
-            if (cachedData) {
-                statusEl.textContent = '⚠️ Usando cache, actualizando desde fuentes...';
-                statusEl.style.color = '#f0ad4e';
-                cacheInfoEl.style.display = 'block';
-                cacheStatusEl.textContent = 'Cache expirado, actualizando en segundo plano';
-                Papa.parse(cachedData, {
-                    delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
-                    complete: (results) => processCSVData(results.data)
-                });
-            }
-            
-            // Intentar actualizar desde fuentes automáticamente
-            try {
-                let response = null;
-                let successUrl = null;
-                
-                for (let urlIndex = 0; urlIndex < CATALOG_ALTERNATIVES.length; urlIndex++) {
-                    const currentUrl = CATALOG_ALTERNATIVES[urlIndex];
-                    console.log(`🔄 Constructor Estándar: Probando fuente ${urlIndex + 1}/${CATALOG_ALTERNATIVES.length}`);
-                    
-                    try {
-                        response = await fetch(currentUrl);
-                        
-                        if (response && response.ok) {
-                            successUrl = currentUrl;
-                            console.log(`✅ Constructor Estándar: Éxito con fuente ${urlIndex + 1}`);
-                            break;
-                        }
-                    } catch (error) {
-                        console.log(`❌ Constructor Estándar: Fuente ${urlIndex + 1} falló: ${error.message}`);
-                        if (urlIndex < CATALOG_ALTERNATIVES.length - 1) {
-                            await new Promise(resolve => setTimeout(resolve, 1000));
-                        }
-                    }
-                }
-                
-                if (!response || !response.ok) {
-                    throw new Error('Todas las fuentes temporalmente no disponibles');
-                }
-                
-                const csvText = await response.text();
-                const isNewVersion = csvText !== cachedData;
-                
-                // Actualizar cache
-                localStorage.setItem('constructorStandardCache', csvText);
-                localStorage.setItem('constructorStandardCacheTime', Date.now().toString());
-                
-                Papa.parse(csvText, {
-                    delimiter: ";", skipEmptyLines: true, encoding: "UTF-8",
-                    complete: (results) => {
-                        processCSVData(results.data);
-                        const sourceName = successUrl.includes('leonardo7512.github.io') ? 'GitHub Pages' :
-                                          successUrl.startsWith('./') ? 'Archivo local' :
-                                          successUrl.includes('jsdelivr') ? 'jsDelivr CDN' : 'GitHub Raw';
-                        
-                        statusEl.textContent = isNewVersion ? 
-                            `✅ Catálogo actualizado desde: ${sourceName}` : 
-                            `✅ Catálogo verificado desde: ${sourceName} (sin cambios)`;
-                        statusEl.style.color = 'var(--accent-green)';
-                        
-                        // Actualizar información del cache
-                        cacheInfoEl.style.display = 'block';
-                        cacheStatusEl.textContent = `Nuevo cache válido por 4 horas desde ${sourceName}`;
-                        
-                        console.log(`✅ Constructor Estándar: Catálogo ${isNewVersion ? 'actualizado' : 'verificado'} desde ${sourceName}`);
-                    },
-                    error: (err) => { throw new Error(`Error al procesar CSV: ${err.message}`); }
-                });
-                
-            } catch (error) {
-                console.error("Constructor Estándar: Error al actualizar catálogo:", error);
-                
-                // Si falló pero tenemos cache, mantener funcionando
-                if (cachedData) {
-                    statusEl.textContent = '⚠️ Fuentes temporalmente no disponibles - funcionando con cache';
-                    statusEl.style.color = '#f0ad4e';
+
+            const cachedRaw = localStorage.getItem('constructorStandardCache');
+            const cacheTime = localStorage.getItem('constructorStandardCacheTime');
+            const cacheValid = cachedRaw && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_DURATION;
+
+            const usarCache = (motivo) => {
+                if (!cachedRaw) return false;
+                try {
+                    const parsed = JSON.parse(cachedRaw);
+                    if (!parsed || !parsed.products || !parsed.pricesBySku) throw new Error('formato de cache inesperado');
+                    terminarCargaCatalogo(parsed.products, parsed.pricesBySku, new Set(parsed.products.map(p => p.priceCategory)));
+                    statusEl.textContent = motivo;
+                    statusEl.style.color = motivo.includes('⚠️') ? '#f0ad4e' : 'var(--accent-green)';
                     cacheInfoEl.style.display = 'block';
-                    cacheStatusEl.textContent = 'Funcionando con cache local, reintenta más tarde';
-                } else {
-                    statusEl.textContent = '❌ Error al cargar el catálogo. Reintenta en unos minutos.';
+                    cacheStatusEl.textContent = `${allProducts.length} productos en cache`;
+                    return true;
+                } catch (e) {
+                    console.warn('Cache local con formato viejo/corrupto, se descarta:', e.message);
+                    localStorage.removeItem('constructorStandardCache');
+                    localStorage.removeItem('constructorStandardCacheTime');
+                    return false;
+                }
+            };
+
+            if (!forzarRefresco && cacheValid) { if (usarCache('✅ Catálogo desde cache local')) return; }
+
+            statusEl.textContent = '🔗 Conectando a Google Sheets...';
+            statusEl.style.color = '';
+            try {
+                const [respPrincipal, respExcepciones] = await Promise.all([
+                    fetchConTimeout(urlHojaCSV(SHEETS_CONFIG.principal)),
+                    fetchConTimeout(urlHojaCSV(SHEETS_CONFIG.excepciones))
+                ]);
+                if (!respPrincipal.ok) throw new Error('No se pudo conectar a la hoja principal');
+                const csvPrincipal = await respPrincipal.text();
+                const csvExcepciones = respExcepciones.ok ? await respExcepciones.text() : '';
+
+                const products = [], pricesBySkuNuevo = {}, categories = new Set();
+                procesarCatalogoPrincipalSheets(csvPrincipal, pricesBySkuNuevo, products, categories);
+                if (csvExcepciones) procesarCatalogoExcepcionesSheets(csvExcepciones, pricesBySkuNuevo, products, categories);
+                if (products.length === 0) throw new Error('Las hojas respondieron pero no se encontraron productos');
+
+                localStorage.setItem('constructorStandardCache', JSON.stringify({ products, pricesBySku: pricesBySkuNuevo }));
+                localStorage.setItem('constructorStandardCacheTime', Date.now().toString());
+                terminarCargaCatalogo(products, pricesBySkuNuevo, categories);
+                statusEl.textContent = `✅ Conectado a Google Sheets — ${allProducts.length} productos`;
+                statusEl.style.color = 'var(--accent-green)';
+                cacheInfoEl.style.display = 'block';
+                cacheStatusEl.textContent = `Sincronizado hace instantes | válido 4 horas`;
+            } catch (error) {
+                console.error("Constructor: Error al actualizar catálogo:", error);
+                if (!usarCache('⚠️ Sin conexión a Sheets — usando última copia local')) {
+                    statusEl.textContent = '❌ Error al cargar el catálogo: ' + error.message;
                     statusEl.style.color = 'red';
                     cacheInfoEl.style.display = 'block';
                     cacheStatusEl.textContent = 'Sin conexión y sin cache disponible';
@@ -245,48 +334,9 @@
             }
         }
 
-        function getCategoriaPrecios(d) {
-            const match = String(d).trim().match(/(.*?)\s*-\s*/);
-            return (match && match[1]) ? match[1].trim().replace(/"/g, '') : "General";
-        }
-
-        function processCSVData(data) {
-            const products = [], localPrices = {}, categories = new Set();
-            for (let i = 1; i < data.length; i++) {
-                const row = data[i];
-                if (!row || row.length < 5 || !row[0]) continue;
-                
-                const priceType = row[2].trim().toUpperCase();
-                
-                // >>>>> CAMBIO CLAVE AQUÍ <<<<<
-                // Si el tipo de precio es VIP o WEBALIA, no procesamos esta fila de precio.
-                if (priceType.includes('VIP') || priceType.includes('PRECIOS WEBALIA')) {
-                    continue; 
-                }
-                
-                const sku = row[0].trim();
-                if (!localPrices[sku]) {
-                    const desc = row[1].trim();
-                    const cat = getCategoriaPrecios(desc);
-                    products.push({ sku, description: desc, family: sku.substring(0, 2), priceCategory: cat });
-                    localPrices[sku] = [];
-                    categories.add(cat);
-                }
-                
-                const priceNet = parseFloat(row[3]);
-                if (priceNet > 0) {
-                    localPrices[sku].push({ type: row[2].trim(), net: priceNet, gross: parseFloat(row[4]) || 0 });
-                }
-            }
-            allProducts = products.sort((a,b) => a.description.localeCompare(b.description));
-            pricesBySku = localPrices;
-            const catFilter = document.getElementById('categoryFilter');
-            Array.from(categories).sort().forEach(c => catFilter.innerHTML += `<option value="${c}">${c}</option>`);
-            clearProductDisplay();
-            updateOrderDisplay();
-            document.getElementById('loading-section').style.display = 'none';
-            document.getElementById('main-app').style.display = 'block';
-        }
+        // getCategoriaPrecios / processCSVData (formato Git legado) eliminados —
+        // reemplazados por procesarCatalogoPrincipalSheets / procesarCatalogoExcepcionesSheets
+        
         
         function clearProductDisplay() {
             document.getElementById('productsContainer').innerHTML = '<div style="text-align:center;padding:40px;color:#666;">Ingrese un término de búsqueda para comenzar.</div>';
@@ -353,6 +403,14 @@
             }
         }
         
+        function obtenerMayorReferencia(sku) {
+            const disponibles = pricesBySku[sku] || [];
+            const tiers = disponibles.map(p => ({ ...p, minQty: getTier(p.type).minQty }));
+            const mayorTiers = tiers.filter(t => t.minQty > 1);
+            if (mayorTiers.length === 0) return null;
+            return mayorTiers.reduce((best, current) => current.minQty < best.minQty ? current : best);
+        }
+
         function manuallyUpdatePrice(index, newPriceStr) {
             const newPrice = parseFloat(newPriceStr);
             const item = currentOrder[index];
@@ -374,6 +432,13 @@
             }
 
             item.priceData.type = 'MANUAL';
+
+            // Aviso puramente visual — NO se guarda ni se incluye en ningún resumen/exportación.
+            // Solo recuerda en pantalla que un precio bajo Mayor debe respaldarse con firma/correo
+            // de quien lo autorizó, fuera de este sistema.
+            const mayorRef = obtenerMayorReferencia(item.sku);
+            item._avisoBajoMayor = !!(mayorRef && item.priceData.gross < mayorRef.gross);
+
             updateOrderDisplay();
         }
 
@@ -385,6 +450,7 @@
             currentOrder.forEach(item => {
                 if (!item.manualLock) {
                     item.priceData = getBestPrice(item.sku, categoryQuantities[item.priceCategory]);
+                    item._avisoBajoMayor = false;
                 }
             });
             updateOrderDisplay();
@@ -423,6 +489,7 @@
         function resetPrice(index) {
             currentOrder[index].manualLock = false;
             currentOrder[index].priceData.type = ''; 
+            currentOrder[index]._avisoBajoMayor = false;
             updateAllPricesInOrder();
         }
 
@@ -479,11 +546,12 @@
                     <div class="order-item-info">
                         <div class="sku">${item.sku}</div>
                         <div class="desc">${item.description}</div>
+                        ${item._avisoBajoMayor ? `<div class="aviso-bajo-mayor">⚠️ Precio bajo Mayor — respaldar con firma y/o correo de quien autorizó</div>` : ''}
                     </div>
                     <div class="order-item-controls">
                         <input type="number" value="${item.quantity}" min="1" onchange="updateQuantityInOrder(${originalIndex}, this.value)">
                         <div class="price-details">
-                            <input type="number" class="unit-price-input" value="${Math.round(unitPrice)}" onchange="manuallyUpdatePrice(${originalIndex}, this.value)">
+                            <input type="number" class="unit-price-input${item._avisoBajoMayor ? ' input-aviso' : ''}" value="${Math.round(unitPrice)}" onchange="manuallyUpdatePrice(${originalIndex}, this.value)">
                             <b class="line-total">${lineTotal.toLocaleString('es-CL')}</b>
                         </div>
                     </div>
@@ -695,7 +763,7 @@
         }
         
         document.addEventListener('DOMContentLoaded', () => {
-            loadCatalogFromUrl();
+            loadCatalogFromSheets();
             document.getElementById('importFile').addEventListener('change', importOrder);
             document.getElementById('showPrices').addEventListener('change', updateAllPricesInOrder);
         });
