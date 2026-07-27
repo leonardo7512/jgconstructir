@@ -50,7 +50,9 @@
         .order-item-info .sku { font-weight: 600; color: var(--primary); font-size: 14px; }
         .order-item-info .desc { font-size: 12px; color: #666; }
         .aviso-bajo-mayor { font-size: 11px; font-weight: 700; color: #b35400; background: #fff1e6; border: 1px solid var(--accent-orange); border-radius: 4px; padding: 3px 6px; margin-top: 4px; display: inline-block; }
+        .aviso-transporte { font-size: 11px; font-weight: 700; color: #1C3A5E; background: #e8f0f9; border: 1px solid var(--primary-light); border-radius: 4px; padding: 3px 6px; margin-top: 4px; display: inline-block; }
         .input-aviso { border: 2px solid var(--accent-orange) !important; }
+        .input-aviso-transporte { border: 2px solid var(--primary-light) !important; }
         .order-item-controls { display: flex; align-items: center; gap: 10px; }
         .order-item-controls input[type="number"] { width: 60px; padding: 5px; text-align: center; }
         .price-details { text-align: right; }
@@ -69,6 +71,7 @@
         /* Estilo para información de cache */
         .cache-info { margin-top: 10px; padding: 8px; background: #f7f9fb; border-radius: 5px; font-size: 12px; color: #666; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .btn-refresh-catalogo { background: var(--primary); color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; cursor: pointer; font-weight: 600; }
+        .catalog-status-bar { display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 13px; font-weight: 600; color: var(--accent-green); background: #f7f9fb; border-radius: 8px; padding: 8px 12px; margin: 10px 0 15px; flex-wrap: wrap; }
         
         @media (max-width: 900px) { .order-section-grid { grid-template-columns: 1fr; } .order-item { grid-template-columns: 1fr; } }
     </style>
@@ -86,6 +89,10 @@
 
         <div id="main-app">
             <div class="panel header"><h1>🛍️ Constructor de Pedidos PRO</h1>
+                <div class="catalog-status-bar">
+                    <span id="catalog-status-persist">🔗 Catálogo conectado</span>
+                    <button class="btn-refresh-catalogo" onclick="loadCatalogFromSheets(true)">🔄 Actualizar catálogo</button>
+                </div>
                 <div class="config-panel">
                     <div class="config-group"><label for="clientName">Nombre Cliente:</label><input type="text" id="clientName" placeholder="Requerido para descarga..."></div>
                     <div class="config-group"><label>Modalidad:</label><select id="deliveryMode"><option value="RETIRO">RETIRO EN BODEGA</option><option value="ENVÍO">ENVÍO A DOMICILIO</option><option value="ENVÍO OFC">ENVÍO A OFICINA</option></select></div>
@@ -162,6 +169,9 @@
             if (/lata auto/.test(c)) return true;
             if (/tabletas aromaticas/.test(c)) return true;
             return false;
+        }
+        function esCategoriaTransporte(categoria) {
+            return /transporte/.test(normalizarTextoCatalogo(categoria));
         }
         function encontrarIndiceColumnaExc(header, nombres) {
             for (let i = 0; i < header.length; i++) {
@@ -240,8 +250,23 @@
                 const sku = normalizarSKU(row[iSku]);
                 if (!sku) continue;
                 const categoria = iCategoria !== -1 ? (row[iCategoria] || '').trim() : '';
-                if (!esFamiliaExcluidaDePrincipal(categoria)) continue; // no es una de las 3 familias: su Detalle/Mayor ya vino del principal
                 const descripcion = iDescripcion !== -1 ? (row[iDescripcion] || '').trim() : '';
+
+                // Ítems tipo "Transporte" (99 Minutos, Fucas, Relámpago, Tutto Pets, etc.): no tienen
+                // lista de precio aplicable, el precio se cotiza al momento. Se registran a $0 con
+                // tipo "CONSULTAR PRECIO" para que sean buscables/agregables y el vendedor ponga el
+                // precio a mano — nunca pasan por las reglas de familia/Detalle/Mayor de abajo.
+                if (esCategoriaTransporte(categoria)) {
+                    if (!pricesBySku[sku]) {
+                        products.push({ sku, description: descripcion, family: sku.substring(0, 2), priceCategory: categoria || 'General' });
+                        pricesBySku[sku] = [];
+                        categories.add(categoria || 'General');
+                    }
+                    pricesBySku[sku].push({ type: 'CONSULTAR PRECIO', net: 0, gross: 0 });
+                    continue;
+                }
+
+                if (!esFamiliaExcluidaDePrincipal(categoria)) continue; // no es una de las 3 familias: su Detalle/Mayor ya vino del principal
                 const precioDetalle = iPrecioDetalle !== -1 ? (limpiarValor(row[iPrecioDetalle]) || 0) : 0;
                 const precioMayor = iPrecioMayor !== -1 ? (limpiarValor(row[iPrecioMayor]) || 0) : 0;
                 const notas = iNotas !== -1 ? (row[iNotas] || '').trim() : '';
@@ -269,6 +294,11 @@
             document.getElementById('main-app').style.display = 'block';
         }
 
+        function actualizarBarraPersistente(texto, color) {
+            const el = document.getElementById('catalog-status-persist');
+            if (el) { el.textContent = texto; el.style.color = color; }
+        }
+
         async function loadCatalogFromSheets(forzarRefresco = false) {
             const statusEl = document.getElementById('loading-status');
             const cacheInfoEl = document.getElementById('cache-info');
@@ -289,6 +319,7 @@
                     statusEl.style.color = motivo.includes('⚠️') ? '#f0ad4e' : 'var(--accent-green)';
                     cacheInfoEl.style.display = 'block';
                     cacheStatusEl.textContent = `${allProducts.length} productos en cache`;
+                    actualizarBarraPersistente(`${motivo} — ${allProducts.length} productos`, motivo.includes('⚠️') ? '#f0ad4e' : 'var(--accent-green)');
                     return true;
                 } catch (e) {
                     console.warn('Cache local con formato viejo/corrupto, se descarta:', e.message);
@@ -302,6 +333,7 @@
 
             statusEl.textContent = '🔗 Conectando a Google Sheets...';
             statusEl.style.color = '';
+            actualizarBarraPersistente('🔗 Conectando a Google Sheets...', 'var(--text-dark)');
             try {
                 const [respPrincipal, respExcepciones] = await Promise.all([
                     fetchConTimeout(urlHojaCSV(SHEETS_CONFIG.principal)),
@@ -323,6 +355,7 @@
                 statusEl.style.color = 'var(--accent-green)';
                 cacheInfoEl.style.display = 'block';
                 cacheStatusEl.textContent = `Sincronizado hace instantes | válido 4 horas`;
+                actualizarBarraPersistente(`✅ Conectado — ${allProducts.length} productos`, 'var(--accent-green)');
             } catch (error) {
                 console.error("Constructor: Error al actualizar catálogo:", error);
                 if (!usarCache('⚠️ Sin conexión a Sheets — usando última copia local')) {
@@ -330,6 +363,7 @@
                     statusEl.style.color = 'red';
                     cacheInfoEl.style.display = 'block';
                     cacheStatusEl.textContent = 'Sin conexión y sin cache disponible';
+                    actualizarBarraPersistente('❌ Error de conexión — revisa e intenta de nuevo', 'red');
                 }
             }
         }
@@ -411,6 +445,13 @@
             return mayorTiers.reduce((best, current) => current.minQty < best.minQty ? current : best);
         }
 
+        // Ítems tipo Transporte (99 Minutos, Fucas, Relámpago, etc.): no tienen Mayor, el precio
+        // se cotiza siempre a mano — por eso llevan un aviso distinto al de "precio bajo Mayor".
+        function esItemConsultarPrecio(sku) {
+            const precios = pricesBySku[sku] || [];
+            return precios.length === 1 && precios[0].type === 'CONSULTAR PRECIO';
+        }
+
         function manuallyUpdatePrice(index, newPriceStr) {
             const newPrice = parseFloat(newPriceStr);
             const item = currentOrder[index];
@@ -433,11 +474,17 @@
 
             item.priceData.type = 'MANUAL';
 
-            // Aviso puramente visual — NO se guarda ni se incluye en ningún resumen/exportación.
-            // Solo recuerda en pantalla que un precio bajo Mayor debe respaldarse con firma/correo
-            // de quien lo autorizó, fuera de este sistema.
-            const mayorRef = obtenerMayorReferencia(item.sku);
-            item._avisoBajoMayor = !!(mayorRef && item.priceData.gross < mayorRef.gross);
+            // Avisos puramente visuales — NO se guardan ni se incluyen en ningún resumen/exportación.
+            if (esItemConsultarPrecio(item.sku)) {
+                item._avisoTransporte = true;
+                item._avisoBajoMayor = false;
+            } else {
+                // Solo recuerda en pantalla que un precio bajo Mayor debe respaldarse con firma/correo
+                // de quien lo autorizó, fuera de este sistema.
+                const mayorRef = obtenerMayorReferencia(item.sku);
+                item._avisoBajoMayor = !!(mayorRef && item.priceData.gross < mayorRef.gross);
+                item._avisoTransporte = false;
+            }
 
             updateOrderDisplay();
         }
@@ -451,6 +498,7 @@
                 if (!item.manualLock) {
                     item.priceData = getBestPrice(item.sku, categoryQuantities[item.priceCategory]);
                     item._avisoBajoMayor = false;
+                    item._avisoTransporte = esItemConsultarPrecio(item.sku);
                 }
             });
             updateOrderDisplay();
@@ -490,6 +538,7 @@
             currentOrder[index].manualLock = false;
             currentOrder[index].priceData.type = ''; 
             currentOrder[index]._avisoBajoMayor = false;
+            currentOrder[index]._avisoTransporte = false;
             updateAllPricesInOrder();
         }
 
@@ -547,11 +596,12 @@
                         <div class="sku">${item.sku}</div>
                         <div class="desc">${item.description}</div>
                         ${item._avisoBajoMayor ? `<div class="aviso-bajo-mayor">⚠️ Precio bajo Mayor — respaldar con firma y/o correo de quien autorizó</div>` : ''}
+                        ${item._avisoTransporte ? `<div class="aviso-transporte">💡 Cotizar: cobra la tarifa base mínima + adicional según destino/peso (ej. BlueExpress)</div>` : ''}
                     </div>
                     <div class="order-item-controls">
                         <input type="number" value="${item.quantity}" min="1" onchange="updateQuantityInOrder(${originalIndex}, this.value)">
                         <div class="price-details">
-                            <input type="number" class="unit-price-input${item._avisoBajoMayor ? ' input-aviso' : ''}" value="${Math.round(unitPrice)}" onchange="manuallyUpdatePrice(${originalIndex}, this.value)">
+                            <input type="number" class="unit-price-input${item._avisoBajoMayor ? ' input-aviso' : ''}${item._avisoTransporte ? ' input-aviso-transporte' : ''}" value="${Math.round(unitPrice)}" onchange="manuallyUpdatePrice(${originalIndex}, this.value)">
                             <b class="line-total">${lineTotal.toLocaleString('es-CL')}</b>
                         </div>
                     </div>
