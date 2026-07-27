@@ -596,7 +596,7 @@
                         <div class="sku">${item.sku}</div>
                         <div class="desc">${item.description}</div>
                         ${item._avisoBajoMayor ? `<div class="aviso-bajo-mayor">⚠️ Precio bajo Mayor — respaldar con firma y/o correo de quien autorizó</div>` : ''}
-                        ${item._avisoTransporte ? `<div class="aviso-transporte">💡 Cotizar: cobra la tarifa base mínima + adicional según destino/peso (ej. BlueExpress)</div>` : ''}
+                        ${item._avisoTransporte ? `<div class="aviso-transporte">💡 Cotizar: Ajustar precios pensando en que nunca se cobre menos de la base, y con dif a favor para Aromaker, ajustar en caso de ser necesario a la baja pero nunca por debajo de la base minima</div>` : ''}
                     </div>
                     <div class="order-item-controls">
                         <input type="number" value="${item.quantity}" min="1" onchange="updateQuantityInOrder(${originalIndex}, this.value)">
