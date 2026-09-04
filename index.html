@@ -173,10 +173,20 @@
         function esCategoriaTransporte(categoria) {
             return /transporte/.test(normalizarTextoCatalogo(categoria));
         }
-        function encontrarIndiceColumnaExc(header, nombres) {
-            for (let i = 0; i < header.length; i++) {
+        // Busca una columna por nombre de encabezado (insensible a mayúsculas/acentos).
+        // Primero intenta coincidencia EXACTA; si no encuentra nada, prueba coincidencia
+        // por CONTENIDO (el encabezado real contiene el nombre buscado). El parámetro
+        // "desde" permite empezar a buscar a partir de una columna específica — se usa,
+        // por ejemplo, para encontrar la SEGUNDA columna "NETO" (la de Mayor) y no
+        // quedarse siempre con la primera (la de Detalle).
+        function encontrarIndiceColumna(header, nombres, desde = 0) {
+            const normalizados = nombres.map(normalizarTextoCatalogo);
+            for (let i = desde; i < header.length; i++) {
+                if (normalizados.includes(normalizarTextoCatalogo(header[i]))) return i;
+            }
+            for (let i = desde; i < header.length; i++) {
                 const h = normalizarTextoCatalogo(header[i]);
-                if (nombres.some(n => h === normalizarTextoCatalogo(n))) return i;
+                if (normalizados.some(n => h.includes(n))) return i;
             }
             return -1;
         }
@@ -191,24 +201,63 @@
             pricesBySku[sku].push({ type: tipo, net: neto, gross: bruto });
         }
 
-        // Catálogo principal ("Precios Aromaker"): fila 0 = banner decorativo, fila 1 = encabezados reales, fila 2+ = datos
-        // D=CATEGORIA, E=DESCRIPCION, F=SKU, G=PRECIO DETALLE(bruto), H=NETO Detalle, I=PRECIO MAYOR(bruto), J=NETO Mayor, K=IMAGEN, L=OBSERVACIONES
+        // Ubica la fila real de encabezados del catálogo principal buscando, dentro de las
+        // primeras 10 filas, la que contenga a la vez una columna "CATEGORIA" y una "SKU".
+        // Antes se asumía que esa fila era siempre la fila 2 (índice 1) con datos fijos en
+        // columnas D-L — eso se rompe apenas alguien agrega, quita o mueve una fila/columna
+        // de banner en la hoja. Buscándola por nombre, da igual cuántas filas de banner haya
+        // arriba o si queda una fila en blanco entre el encabezado y los datos.
+        function detectarEncabezadoPrincipal(data) {
+            for (let i = 0; i < Math.min(data.length, 10); i++) {
+                const row = data[i] || [];
+                const iCat = encontrarIndiceColumna(row, ['categoria']);
+                const iSku = encontrarIndiceColumna(row, ['sku']);
+                if (iCat !== -1 && iSku !== -1) return i;
+            }
+            return -1;
+        }
+
+        // Catálogo principal ("Precios Aromaker"): las columnas (CATEGORIA, DESCRIPCION, SKU,
+        // PRECIO DETALLE, NETO, PRECIO MAYOR, NETO, OBSERVACIONES) y la fila de inicio de los
+        // datos se detectan por NOMBRE de encabezado, no por letra de columna ni número de fila
+        // fijo. Mientras esos títulos de columna se mantengan (aunque cambien de posición, o se
+        // borren/agreguen filas), el parseo sigue funcionando.
         // ⚠️ Nunca genera filas VIP/Webalia — este constructor es para vendedores, no deben verlas ni aunque existieran.
         function procesarCatalogoPrincipalSheets(csvText, pricesBySku, products, categories) {
             const data = Papa.parse(csvText, { skipEmptyLines: false }).data;
-            for (let i = 2; i < data.length; i++) {
+
+            const idxHeader = detectarEncabezadoPrincipal(data);
+            if (idxHeader === -1) {
+                throw new Error('No se encontró la fila de encabezados (CATEGORIA + SKU) en el catálogo principal. Revisa si los títulos de columna cambiaron de nombre.');
+            }
+            const header = data[idxHeader];
+
+            const iCategoria = encontrarIndiceColumna(header, ['categoria']);
+            const iDescripcion = encontrarIndiceColumna(header, ['descripcion']);
+            const iSku = encontrarIndiceColumna(header, ['sku']);
+            const iPrecioDetalle = encontrarIndiceColumna(header, ['precio detalle (iva incluido)', 'precio detalle']);
+            const iNetoDetalle = iPrecioDetalle !== -1 ? encontrarIndiceColumna(header, ['neto'], iPrecioDetalle + 1) : -1;
+            const iPrecioMayor = encontrarIndiceColumna(header, ['precio mayor (iva incluido)', 'precio mayor']);
+            const iNetoMayor = iPrecioMayor !== -1 ? encontrarIndiceColumna(header, ['neto'], iPrecioMayor + 1) : -1;
+            const iObservaciones = encontrarIndiceColumna(header, ['observaciones']);
+
+            if (iCategoria === -1 || iDescripcion === -1 || iSku === -1 || iPrecioDetalle === -1 || iNetoDetalle === -1) {
+                throw new Error('Catálogo principal: no se pudieron ubicar todas las columnas obligatorias (CATEGORIA/DESCRIPCION/SKU/PRECIO DETALLE/NETO). Revisa los encabezados de la hoja.');
+            }
+
+            for (let i = idxHeader + 1; i < data.length; i++) {
                 const row = data[i];
-                if (!row || row.length < 12) continue;
-                const categoria = (row[3] || '').trim();
-                const descripcion = (row[4] || '').trim();
-                const sku = normalizarSKU(row[5]);
-                if (!sku) continue;
+                if (!row) continue;
+                const categoria = (row[iCategoria] || '').trim();
+                const descripcion = (row[iDescripcion] || '').trim();
+                const sku = normalizarSKU(row[iSku]);
+                if (!sku) continue; // fila vacía o de separación — se salta sin importar cuántas haya ni en qué posición quede
                 if (esFamiliaExcluidaDePrincipal(categoria)) continue; // viene solo de Excepciones
-                const detalleBruto = limpiarValor(row[6]) || 0;
-                const detalleNeto = limpiarValor(row[7]) || 0;
-                const mayorBruto = limpiarValor(row[8]) || 0;
-                const mayorNeto = limpiarValor(row[9]) || 0;
-                const observaciones = (row[11] || '').trim();
+                const detalleBruto = limpiarValor(row[iPrecioDetalle]) || 0;
+                const detalleNeto = limpiarValor(row[iNetoDetalle]) || 0;
+                const mayorBruto = iPrecioMayor !== -1 ? (limpiarValor(row[iPrecioMayor]) || 0) : 0;
+                const mayorNeto = iNetoMayor !== -1 ? (limpiarValor(row[iNetoMayor]) || 0) : 0;
+                const observaciones = iObservaciones !== -1 ? (row[iObservaciones] || '').trim() : '';
 
                 if (observaciones.toUpperCase().includes('PRECIO UNICO')) {
                     registrarPrecio(pricesBySku, products, categories, sku, descripcion, categoria, 'PRECIO UNICO', detalleNeto, detalleBruto);
@@ -231,17 +280,17 @@
             const data = Papa.parse(csvText, { skipEmptyLines: false }).data;
             let idxHeader = -1;
             for (let i = 0; i < Math.min(data.length, 5); i++) {
-                if (encontrarIndiceColumnaExc(data[i] || [], ['sku']) !== -1) { idxHeader = i; break; }
+                if (encontrarIndiceColumna(data[i] || [], ['sku']) !== -1) { idxHeader = i; break; }
             }
             if (idxHeader === -1) return;
             const header = data[idxHeader];
-            const iCategoria = encontrarIndiceColumnaExc(header, ['categoria']);
-            const iSku = encontrarIndiceColumnaExc(header, ['sku']);
-            const iDescripcion = encontrarIndiceColumnaExc(header, ['descripcion']);
-            const iPrecioDetalle = encontrarIndiceColumnaExc(header, ['precio_detalle', 'precio detalle']);
-            const iPrecioMayor = encontrarIndiceColumnaExc(header, ['precio_mayor', 'precio mayor']);
-            const iUmbral = encontrarIndiceColumnaExc(header, ['umbral_mayor', 'umbral mayor']);
-            const iNotas = encontrarIndiceColumnaExc(header, ['notas']);
+            const iCategoria = encontrarIndiceColumna(header, ['categoria']);
+            const iSku = encontrarIndiceColumna(header, ['sku']);
+            const iDescripcion = encontrarIndiceColumna(header, ['descripcion']);
+            const iPrecioDetalle = encontrarIndiceColumna(header, ['precio_detalle', 'precio detalle']);
+            const iPrecioMayor = encontrarIndiceColumna(header, ['precio_mayor', 'precio mayor']);
+            const iUmbral = encontrarIndiceColumna(header, ['umbral_mayor', 'umbral mayor']);
+            const iNotas = encontrarIndiceColumna(header, ['notas']);
             if (iSku === -1) return;
 
             for (let i = idxHeader + 1; i < data.length; i++) {
