@@ -150,6 +150,12 @@
             excepciones: { id: '171l6JpmS2b1Aq-WDXLiq8d4SMJM75oUXf6Y8xhpd2Jk', gid: '1973237883' }
         };
         function urlHojaCSV(cfg) {
+            // 2026-10-20: /export dejó de responder para el catálogo principal (HTTP 400, archivo muy
+            // pesado por las imágenes). Para esa hoja se usa /gviz desde la fila de encabezados (A2),
+            // que entrega exactamente las mismas columnas y datos.
+            if (cfg.id === SHEETS_CONFIG.principal.id) {
+                return `https://docs.google.com/spreadsheets/d/${cfg.id}/gviz/tq?tqx=out:csv&headers=1&range=A2:Z&gid=${cfg.gid}`;
+            }
             return `https://docs.google.com/spreadsheets/d/${cfg.id}/export?format=csv&gid=${cfg.gid}`;
         }
         function fetchConTimeout(url, ms = 15000) {
